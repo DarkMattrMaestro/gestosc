@@ -1,0 +1,97 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Download model
+      run: |
+        curl -O "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task"
+    - name: Build python script
+      uses: Nuitka/Nuitka-Action@main
+      with:
+        nuitka-version: main
+        script-name: gesture-handler.py
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: exe
+        path: build/gesture-handler.py
+        include-hidden-files: true
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+      - name: Generate changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-file: "false"  # Don't write to file, use output
+          skip-version-file: true
+          skip-commit: true
+          skip-tag: true
+      - name: Generate checksums
+        run: |
+          sha256sum build/gesture-handler.py > checksums.txt
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            build/gesture-handler.exe
+            checksums.txt
+        
+  license_check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Get explicit and transitive dependencies
+      run: |
+        pip install -r requirements.txt
+        pip freeze > requirements-all.txt
+    - name: Check python
+      id: license_check_report
+      uses: pilosus/action-pip-license-checker@v3
+      with:
+        requirements: 'requirements-all.txt'
+        fail: 'StrongCopyleft'
+        exclude: '(?i)^(pylint|aio[-_]*).*'
+    - name: Print report
+      if: ${{ always() }}
+      run: echo "${{ steps.license_check_report.outputs.report }}"
