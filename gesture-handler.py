@@ -1,9 +1,16 @@
 # Gesture-Operated Steering Controller (GestOSC)
 
+# Project info
+# nuitka-project: --product-name=GestOSC
+# nuitka-project: --file-version=0.1.0
+# nuitka-project: --file-description=Mime a steering wheel with your hands to control games and apps, with the compatibility of XBox controllers 
+
 # Base project config
 # nuitka-project: --msvc=latest
 # nuitka-project: --follow-imports
 # nuitka-project: --mode=standalone
+# nuitka-project: --mode=onefile
+# nuitka-project: --output-dir={MAIN_DIRECTORY}/build
 
 # nuitka-project: --include-data-files={MAIN_DIRECTORY}/hand_landmarker.task=hand_landmarker.task
 
@@ -13,9 +20,13 @@
 # TKInter fix
 # nuitka-project: --enable-plugin=tk-inter
 
+
+# nuitka-project: --output-filename=GestOSC
+
 import cv2
 import time
 import math
+from os import path
 from tkinter import messagebox
 
 import mediapipe as mp
@@ -29,7 +40,7 @@ class ErrorLogging:
 start_time = int(time.time() * 1000)
 
 print("Loading hand model and options...")
-model_path = '/absolute/path/to/gesture_recognizer.task'
+model_path = path.join(path.dirname(__file__), "hand_landmarker.task")
 
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
@@ -201,7 +212,7 @@ class Camera:
 if __name__ == "__main__":
     print("Starting...")
     options = HandLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path='./hand_landmarker.task'),
+        base_options=BaseOptions(model_asset_path=model_path),
         running_mode=VisionRunningMode.LIVE_STREAM,
         num_hands=2,
         result_callback=process_landmarker_res
