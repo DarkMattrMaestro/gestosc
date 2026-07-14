@@ -1,12 +1,30 @@
 # Gesture-Operated Steering Controller (GestOSC)
 
+# Base project config
+# nuitka-project: --msvc=latest
+# nuitka-project: --follow-imports
+# nuitka-project: --mode=standalone
+
+# nuitka-project: --include-data-files={MAIN_DIRECTORY}/hand_landmarker.task=hand_landmarker.task
+
+# Package configs
+# nuitka-project: --user-package-configuration-file={MAIN_DIRECTORY}/nuitka-package.config.yml
+
+# TKInter fix
+# nuitka-project: --enable-plugin=tk-inter
+
 import cv2
 import time
 import math
+from tkinter import messagebox
 
 import mediapipe as mp
 import numpy as np
 import vgamepad
+
+class ErrorLogging:
+    run_on_exit = lambda : None
+
 
 start_time = int(time.time() * 1000)
 
@@ -66,7 +84,7 @@ class VizUtils:
         return annotated_image
 
 class SteeringWheel:
-    gamepad = vgamepad.VX360Gamepad()
+    gamepad: vgamepad.VX360Gamepad = vgamepad.VX360Gamepad()
     
     pos = {
         "Right": {
@@ -80,6 +98,10 @@ class SteeringWheel:
     }
     
     def update_controller():
+        for handedness in ["Left", "Right"]:
+            for axis in ["sx", "sy"]:
+                if SteeringWheel.pos[handedness][axis] is None: return
+        
         x_diff = SteeringWheel.pos["Right"]["sx"] - SteeringWheel.pos["Left"]["sx"]
         y_diff = SteeringWheel.pos["Right"]["sy"] - SteeringWheel.pos["Left"]["sy"]
         z_diff = math.sqrt(x_diff**2 + y_diff**2)
@@ -128,36 +150,51 @@ def process_landmarker_res(result: HandLandmarkerResult, output_image: mp.Image,
         VizUtils.buffered_frame = brg_frame = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
 
 #Camera settings
-print("Setting up camera...")
-width=640
-height=480
-camera = cv2.VideoCapture(0)
-camera.set(cv2.CAP_PROP_FRAME_WIDTH,width)
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT,height)
-
-def measurement_loop():
-    global frame2
-    while True:
-        ret, frame = camera.read()
-        frame2 = frame
-        if not ret: break
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-        
-        if cv2.waitKey(1)== ord('q'):
-            break
-        
-        landmarker.detect_async(mp_image, int(time.time() * 1000) - start_time)
-        
-        if VizUtils.show_visuals and VizUtils.buffered_frame is not None:
-            cv2.imshow("Hand Tracking", VizUtils.buffered_frame)
+class Camera:
+    camera = None
     
+    def init_camera():
+        print("Setting up camera...")
+        width=640
+        height=480
+        Camera.camera = cv2.VideoCapture(0)
+        if not Camera.camera.isOpened():
+            ErrorLogging.run_on_exit = lambda : messagebox.showerror(title="GestOSC - No Camera Connected", message="There is no camera connected!\nTry connecting/reconnecting a camera.")
+            return -1
+        
+        Camera.camera.set(cv2.CAP_PROP_FRAME_WIDTH,width)
+        Camera.camera.set(cv2.CAP_PROP_FRAME_HEIGHT,height)
+        
+        return 0
+    
+    def measurement_loop():
+        print("Beginning measurement")
+        while True:
+            ret, frame = Camera.camera.read()
+            if not ret:
+                ErrorLogging.run_on_exit = lambda : messagebox.showwarning(title="GestOSC - Camera Disconnected", message="The camera was suddenly disconnected!")
+                break
+            
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+            
+            if cv2.waitKey(1) == ord('q'):
+                break
+            
+            landmarker.detect_async(mp_image, int(time.time() * 1000) - start_time)
+            
+            if VizUtils.show_visuals and VizUtils.buffered_frame is not None:
+                cv2.imshow("Hand Tracking", VizUtils.buffered_frame)
+        
 
-    SteeringWheel.gamepad.reset()
-    SteeringWheel.gamepad.update()
-    camera.release()
-    cv2.destroyAllWindows()
+        Camera.stop_measurement()
+    
+    def stop_measurement():
+        SteeringWheel.gamepad.reset()
+        SteeringWheel.gamepad.update()
+        Camera.camera.release()
+        cv2.destroyAllWindows()
 
 
 
@@ -170,4 +207,7 @@ if __name__ == "__main__":
         result_callback=process_landmarker_res
     )
     with HandLandmarker.create_from_options(options) as landmarker:
-        measurement_loop()
+        if Camera.init_camera() == 0:
+            Camera.measurement_loop()
+
+    ErrorLogging.run_on_exit()

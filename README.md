@@ -16,6 +16,14 @@ Download the `hand_landmarker.task` file from Google's APIs at [https://storage.
 
 Run `python3 gesture-handler.py` while in the virtual environment to load the custom controller. Make sure to reload your desired apps after enabling this controller since, just as with regular XBox controllers, some apps (especially through Steam) only register controller inputs if they are connected before opening the app.
 
+## Building
+Follow the [set-up steps](#set-up), then run the following command in the Python virtual environment
+```bash
+python3 -m nuitka gesture-handler.py
+```
+
+See the build log for the executable's final location.
+
 ## Note
 
 GestOSC is based on a project I took part in for the CuHacking Hackathon. The project tracked points on a paper plate which acted as a physical steering wheel.

@@ -1,3 +1,7 @@
 /venv
+/build
+/dist
+/*.build
+/*.dist
 
 hand_landmarker.task

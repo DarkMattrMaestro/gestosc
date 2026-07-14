@@ -1,0 +1,16 @@
+- module-name: 'vgamepad'
+  dlls:
+    - from_filenames:
+        relative_path: 'win/vigem/client/x64'
+        prefixes:
+          - 'ViGEmClient'
+    - from_filenames:
+        relative_path: 'win/vigem/client/x86'
+        prefixes:
+          - 'ViGEmClient'
+- module-name: 'mediapipe'
+  dlls:
+    - from_filenames:
+        relative_path: 'tasks/c'
+        prefixes:
+          - 'libmediapipe'
