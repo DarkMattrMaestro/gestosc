@@ -266,6 +266,8 @@ class Camera:
             
             if VizUtils.show_visuals and VizUtils.buffered_frame is not None:
                 cv2.imshow(VizUtils.WINDOW_NAME, VizUtils.buffered_frame)
+            
+            time.sleep(1/125) # Max refresh rate, as per https://github.com/yannbouteiller/vgamepad/issues/39#issuecomment-3100989230
         
 
         Camera.stop_measurement()
