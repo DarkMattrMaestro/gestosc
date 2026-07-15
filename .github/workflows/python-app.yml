@@ -60,6 +60,7 @@ jobs:
       uses: Nuitka/Nuitka-Action@main
       with:
         nuitka-version: main
+        output-filename: GestOSC_${{ github.ref_name }}_Windows
         script-name: gesture-handler.py
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -76,7 +77,7 @@ jobs:
         uses: actions/download-artifact@v8
       - name: Generate checksums
         run: |
-          sha256sum build/gesture-handler.exe > checksums.txt
+          sha256sum build/GestOSC_${{ github.ref_name }}_Windows.exe > checksums.txt
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
@@ -85,5 +86,5 @@ jobs:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            build/gesture-handler.exe
+            build/GestOSC_${{ github.ref_name }}_Windows.exe
             checksums.txt
