@@ -65,7 +65,7 @@ jobs:
       with:
         nuitka-version: main
         output-filename: ${{ env.EXE_FILE_NAME }}
-        file-version=${{ github.ref_name }}
+        file-version: ${{ github.ref_name }}
         script-name: gesture-handler.py
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
