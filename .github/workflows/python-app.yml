@@ -3,10 +3,14 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    tags:        
+      - '*'  
 
 permissions:
   contents: read
+
+env:
+  EXE_FILE_NAME: GestOSC_${{ github.ref_name }}_Windows
 
 jobs:
   license_check:
@@ -60,13 +64,14 @@ jobs:
       uses: Nuitka/Nuitka-Action@main
       with:
         nuitka-version: main
-        output-filename: GestOSC_${{ github.ref_name }}_Windows
+        output-filename: ${{ env.EXE_FILE_NAME }}
+        file-version=${{ github.ref_name }}
         script-name: gesture-handler.py
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: exe
-        path: build/gesture-handler.py
+        path: build/${{ env.EXE_FILE_NAME }}.exe
         include-hidden-files: true
 
   release:
@@ -77,7 +82,7 @@ jobs:
         uses: actions/download-artifact@v8
       - name: Generate checksums
         run: |
-          sha256sum build/GestOSC_${{ github.ref_name }}_Windows.exe > checksums.txt
+          sha256sum build/${{ env.EXE_FILE_NAME }}.exe > checksums.txt
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
@@ -86,5 +91,5 @@ jobs:
           draft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            build/GestOSC_${{ github.ref_name }}_Windows.exe
+            build/${{ env.EXE_FILE_NAME }}.exe
             checksums.txt
