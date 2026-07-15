@@ -83,13 +83,11 @@ jobs:
       - name: Generate checksums
         run: |
           sha256sum build/${{ env.EXE_FILE_NAME }}.exe > checksums.txt
-      - name: Create release
-        uses: softprops/action-gh-release@v3
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
         with:
-          name: Release ${{ github.ref_name }}
-          body: TODO
-          draft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          files: |
-            build/${{ env.EXE_FILE_NAME }}.exe
-            checksums.txt
+          file: build/${{ env.EXE_FILE_NAME }}.exe
+      - name: Upload checksum to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: checksums.txt
