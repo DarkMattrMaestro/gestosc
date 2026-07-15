@@ -10,9 +10,16 @@
 # nuitka-project: --follow-imports
 # nuitka-project: --mode=standalone
 # nuitka-project: --mode=onefile
+# nuitka-project: --onefile-windows-splash-screen-image={MAIN_DIRECTORY}/splash-screen.png
 # nuitka-project: --output-dir={MAIN_DIRECTORY}/build
 
+# Disable console
+# nuitka-project-if: {OS} == "Windows":
+#   nuitka-project: --windows-console-mode=hide
+
+# Data files
 # nuitka-project: --include-data-files={MAIN_DIRECTORY}/hand_landmarker.task=hand_landmarker.task
+# nuitka-project: --include-data-files={MAIN_DIRECTORY}/vigembus_installer/ViGEmBus_1.22.0_x64_x86_arm64.exe=vigembus_installer/ViGEmBus_1.22.0_x64_x86_arm64.exe
 
 # Package configs
 # nuitka-project: --user-package-configuration-file={MAIN_DIRECTORY}/nuitka-package.config.yml
@@ -26,12 +33,69 @@
 import cv2
 import time
 import math
-from os import path
+from os import path, environ, unlink, link
+from tempfile import gettempdir
 from tkinter import messagebox
 
 import mediapipe as mp
 import numpy as np
-import vgamepad
+
+
+class SplashScreen:
+    def unload_splash():
+        if "NUITKA_ONEFILE_PARENT" in environ:
+            splash_filename = path.join(
+                gettempdir(),
+                "onefile_%d_splash_feedback.tmp" % int(environ["NUITKA_ONEFILE_PARENT"]),
+            )
+
+            if path.exists(splash_filename):
+                unlink(splash_filename)
+    
+    def load_splash():
+        if "NUITKA_ONEFILE_PARENT" in environ:
+            splash_filename = path.join(
+                gettempdir(),
+                "onefile_%d_splash_feedback.tmp" % int(environ["NUITKA_ONEFILE_PARENT"]),
+            )
+
+            if path.exists(splash_filename):
+                link(splash_filename)
+
+
+class ViGEmBusInstaller:
+    """Installer setup for ViGEmBus on Windows if it is not present."""
+    
+    VIGEMBUS_VERSION = "1.22.0"
+    
+    def install():
+        import platform
+        if platform.system() != 'Windows': return 0
+        
+        from pathlib import Path
+        import subprocess
+        
+        installer_path = Path(__file__).parent.absolute() / "vigembus_installer" / ("ViGEmBus_" + ViGEmBusInstaller.VIGEMBUS_VERSION + "_x64_x86_arm64.exe")
+        
+        if messagebox.askokcancel(title="GestOSC - ViGEmBus Installation Required", message=f"GestOSC depends on ViGEmBus for gamepad emulation on Windows.\nWould you like to use the bundled installer (version {ViGEmBusInstaller.VIGEMBUS_VERSION})?"):
+            subprocess.call([installer_path], shell=True)
+        else:
+            return -1
+    
+        return 0
+
+# Ensure ViGEmBus is present; crash gracefully if not
+try:
+    import vgamepad
+except Exception as e:
+    SplashScreen.unload_splash()
+    if ViGEmBusInstaller.install() != 0: exit(0)
+    SplashScreen.load_splash()
+    try:
+        import vgamepad
+    except:
+        messagebox.showerror(title="GestOSC - ViGEmBus Not Found", message="ViGEmBus could not be found!\nSee https://docs.nefarius.at/projects/ViGEm/How-to-Install/#troubleshooting for installation troubleshooting")
+        exit(0)
 
 class ErrorLogging:
     run_on_exit = lambda : None
@@ -49,6 +113,8 @@ HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
 VisionRunningMode = mp.tasks.vision.RunningMode
 
 class VizUtils:
+    WINDOW_NAME = "GestOSC - Hand Tracking"
+    
     show_visuals = True
     
     buffered_frame = None
@@ -178,9 +244,12 @@ class Camera:
         
         return 0
     
-    def measurement_loop():
+    def measurement_loop(landmarker):
         print("Beginning measurement")
+        cv2.namedWindow(VizUtils.WINDOW_NAME, cv2.WINDOW_AUTOSIZE)
         while True:
+            key = cv2.waitKey(1)
+            
             ret, frame = Camera.camera.read()
             if not ret:
                 ErrorLogging.run_on_exit = lambda : messagebox.showwarning(title="GestOSC - Camera Disconnected", message="The camera was suddenly disconnected!")
@@ -190,13 +259,13 @@ class Camera:
             
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
             
-            if cv2.waitKey(1) == ord('q'):
+            if cv2.getWindowProperty(VizUtils.WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
                 break
             
             landmarker.detect_async(mp_image, int(time.time() * 1000) - start_time)
             
             if VizUtils.show_visuals and VizUtils.buffered_frame is not None:
-                cv2.imshow("Hand Tracking", VizUtils.buffered_frame)
+                cv2.imshow(VizUtils.WINDOW_NAME, VizUtils.buffered_frame)
         
 
         Camera.stop_measurement()
@@ -209,7 +278,7 @@ class Camera:
 
 
 
-if __name__ == "__main__":
+def run():
     print("Starting...")
     options = HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=model_path),
@@ -219,6 +288,12 @@ if __name__ == "__main__":
     )
     with HandLandmarker.create_from_options(options) as landmarker:
         if Camera.init_camera() == 0:
-            Camera.measurement_loop()
+            SplashScreen.unload_splash()
+            Camera.measurement_loop(landmarker)
 
     ErrorLogging.run_on_exit()
+
+
+
+if __name__ == "__main__":
+    run()
