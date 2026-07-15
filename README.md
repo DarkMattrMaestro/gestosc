@@ -15,6 +15,7 @@ Create a virtual environment and install the Python dependencies from the `requi
 ```ps1
 python3 -m venv venv
 .\venv\Scripts\Activate.ps1
+$env:VGAMEPAD_SKIP_VIGEMBUS_INSTALL="true" # Prevents using old ViGEmBus installer
 pip3 install -r requirements.txt
 ```
 
@@ -26,7 +27,7 @@ curl -O "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_la
 Run `python3 gesture-handler.py` while in the virtual environment to load the custom controller. Make sure to reload your desired apps after enabling this controller since, just as with regular XBox controllers, some apps (especially through Steam) only register controller inputs if they are connected before opening the app.
 
 ### Linux
-Same as for [Windows](#windows), except that `.\venv\bin\activate` should be run instead of `.\venv\Scripts\Activate.ps1`.
+Same as for [Windows](#windows), except that `.\venv\bin\activate` should be run instead of `.\venv\Scripts\Activate.ps1` and `$env:VGAMEPAD_SKIP_VIGEMBUS_INSTALL="true"` can be omitted.
 
 ## Build executable
 Follow the [set-up steps](#set-up), then run the following command in the Python virtual environment
