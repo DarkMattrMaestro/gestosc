@@ -68,17 +68,22 @@ jobs:
         file-version: ${{ github.ref_name }}
         script-name: gesture-handler.py
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.EXE_FILE_NAME }}.exe
         path: build/${{ env.EXE_FILE_NAME }}.exe
+        if-no-files-found: error
+        archive: false
         include-hidden-files: true
+        retention-days: 1
     - name: Upload release template
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: release-template.md
         path: .github/release-template.md
+        archive: false
         include-hidden-files: true
+        retention-days: 1
 
   release:
     needs: build
