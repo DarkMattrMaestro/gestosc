@@ -28,7 +28,7 @@ jobs:
       run: |
         pip install -r requirements.txt
         pip freeze > requirements-all.txt
-    - name: Check python
+    - name: Check Python
       id: license_check_report
       uses: pilosus/action-pip-license-checker@v3
       with:
@@ -60,18 +60,24 @@ jobs:
     - name: Download model
       run: |
         curl -O "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task"
-    - name: Build python script
+    - name: Build Python script
       uses: Nuitka/Nuitka-Action@main
       with:
         nuitka-version: main
         output-filename: ${{ env.EXE_FILE_NAME }}
         file-version: ${{ github.ref_name }}
         script-name: gesture-handler.py
-    - name: Upload Artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.EXE_FILE_NAME }}.exe
         path: build/${{ env.EXE_FILE_NAME }}.exe
+        include-hidden-files: true
+    - name: Upload release template
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-template.md
+        path: .github/release-template.md
         include-hidden-files: true
 
   release:
@@ -91,7 +97,7 @@ jobs:
         with:
           name: GestOSC ${{ github.ref_name }}
           draft: true
-          body_path: ${{ github.workspace }}/.github/release-template.md
+          body_path: release-template.md
           generate_release_notes: true
           files: |
             ${{ env.EXE_FILE_NAME }}.exe
