@@ -77,6 +77,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
@@ -86,8 +88,6 @@ jobs:
       - name: Draft release with binaries
         uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
-        permissions:
-          contents: write
         with:
           name: GestOSC ${{ github.ref_name }}
           draft: true
