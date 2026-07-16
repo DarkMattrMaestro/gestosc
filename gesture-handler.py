@@ -3,7 +3,7 @@
 # Project info
 # nuitka-project: --product-name=GestOSC
 # nuitka-project: --file-version=0.1.0
-# nuitka-project: --file-description=Mime a steering wheel with your hands to control games and apps, with the compatibility of XBox controllers 
+# nuitka-project: --file-description=GestOSC
 
 # Base project config
 # nuitka-project: --msvc=latest
@@ -30,12 +30,17 @@
 
 # nuitka-project: --output-filename=GestOSC
 
+from threading import Thread
+import queue
+import tkinter as tk
+from tkinter.ttk import Label, Progressbar
+
 import cv2
 import time
 import math
 from os import path, environ, unlink, link
 from tempfile import gettempdir
-from tkinter import messagebox
+from tkinter import LEFT, NW, TOP, messagebox, Tk, Canvas
 
 import mediapipe as mp
 import numpy as np
@@ -62,6 +67,7 @@ class SplashScreen:
             if path.exists(splash_filename):
                 link(splash_filename)
 
+SplashScreen.unload_splash()
 
 class ViGEmBusInstaller:
     """Installer setup for ViGEmBus on Windows if it is not present."""
@@ -88,9 +94,7 @@ class ViGEmBusInstaller:
 try:
     import vgamepad
 except Exception as e:
-    SplashScreen.unload_splash()
     if ViGEmBusInstaller.install() != 0: exit(0)
-    SplashScreen.load_splash()
     try:
         import vgamepad
     except:
@@ -278,7 +282,53 @@ class Camera:
         Camera.camera.release()
         cv2.destroyAllWindows()
 
+class LoadingScreen:
+    def run(msg: str, func):
+        return LoadingScreen(msg, func).res
+    
+    def __init__(self, msg: str, func):
+        self.msg = msg
+        self.func = func
+        
+        self.root = Tk()
+        self.root.title(msg)
+        self.root.overrideredirect(1)
+        self.root.eval('tk::PlaceWindow . center')
+        self.root.attributes('-topmost', True)
+        
+        self.ui()
+        self.start()
+        
+        self.root.mainloop()
+    
+    def threadable_func(self):
+        self.res = self.func()
+        self.queue.put("")
+    
+    def ui(self):
+        self.label = Label(self.root, text="GestOSC")
+        self.label.pack(side=TOP, anchor=NW)
+        self.label = Label(self.root, text=self.msg, font=("TkDefaultFont", 12))
+        self.label.pack(side=TOP)
+        self.prog_bar = Progressbar(
+            self.root, orient="horizontal",
+            length=200, mode="indeterminate",
+            takefocus=True
+            )
+        self.prog_bar.pack(side=TOP)
+        self.prog_bar.start()
 
+    def start(self):
+        self.queue = queue.Queue()
+        Thread(target=self.threadable_func, args=()).start()
+        self.root.after(0, self.process_queue)
+
+    def process_queue(self):
+        if self.queue.empty():
+            self.root.after(200, self.process_queue)
+        else:
+            self.prog_bar.stop()
+            self.root.destroy()
 
 def run():
     print("Starting...")
@@ -289,8 +339,7 @@ def run():
         result_callback=process_landmarker_res
     )
     with HandLandmarker.create_from_options(options) as landmarker:
-        if Camera.init_camera() == 0:
-            SplashScreen.unload_splash()
+        if LoadingScreen.run("Setting up camera...", Camera.init_camera) == 0:
             Camera.measurement_loop(landmarker)
 
     ErrorLogging.run_on_exit()
