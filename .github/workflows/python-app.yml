@@ -73,16 +73,6 @@ jobs:
         name: ${{ env.EXE_FILE_NAME }}.exe
         path: build/${{ env.EXE_FILE_NAME }}.exe
         if-no-files-found: error
-        archive: false
-        include-hidden-files: true
-        retention-days: 1
-    - name: Upload release template
-      uses: actions/upload-artifact@v7
-      with:
-        name: release-template.md
-        path: .github/release-template.md
-        archive: false
-        include-hidden-files: true
         retention-days: 1
 
   release:
@@ -102,8 +92,6 @@ jobs:
         with:
           name: GestOSC ${{ github.ref_name }}
           draft: true
-          body_path: release-template.md
-          generate_release_notes: true
           files: |
             ${{ env.EXE_FILE_NAME }}.exe
             checksums.txt
