@@ -70,7 +70,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: exe
+        name: ${{ env.EXE_FILE_NAME }}.exe
         path: build/${{ env.EXE_FILE_NAME }}.exe
         include-hidden-files: true
 
@@ -82,11 +82,11 @@ jobs:
         uses: actions/download-artifact@v8
       - name: Generate checksums
         run: |
-          sha256sum build/${{ env.EXE_FILE_NAME }}.exe > checksums.txt
+          sha256sum ${{ env.EXE_FILE_NAME }}.exe > checksums.txt
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
-          file: build/${{ env.EXE_FILE_NAME }}.exe
+          file: ${{ env.EXE_FILE_NAME }}.exe
       - name: Upload checksum to release
         uses: svenstaro/upload-release-action@v2
         with:
