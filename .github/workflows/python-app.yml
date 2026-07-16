@@ -91,7 +91,7 @@ jobs:
         with:
           name: GestOSC ${{ github.ref_name }}
           draft: true
-          body_path: .github/release-template.md
+          body_path: ${{ github.workspace }}/.github/release-template.md
           generate_release_notes: true
           files: |
             ${{ env.EXE_FILE_NAME }}.exe
